@@ -1,0 +1,84 @@
+{{ block "index" . }}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title></title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="css/style.css" rel="stylesheet">
+        <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+    </head>
+    <body>
+        {{ template "form" .FormData }}
+    <hr>
+        {{ template "display" .Data }}
+    </body>
+    <script>
+        document.addEventListener("DOMContentLoaded", (event) => {
+            document.body.addEventListener('htmx:beforeSwap', function(evt) {
+                if (evt.detail.xhr.status === 422) {
+                    // Permite a las respuestas 422 a cambiar porque estamos usando este codigo como una señal para remarcar que el fomrmulario subido esta con un correo repetido y queremos rerenderizar con los errores                    
+                    // set isError es para evitar logging de errores en lacosnola que se miran feos porque estamos manejando ya el error 
+                    evt.detail.shouldSwap = true;
+                    evt.detail.isError = false;
+                }
+            });
+        })
+    </script>
+</html>
+{{ end }}
+
+{{ block "form" . }}
+<form hx-swap="outerHTML" hx-post="/contacts">
+    name: <input type="text" name="name" 
+ 
+        {{ if .Values.name  }} 
+            value="{{ .Values.name }}" 
+        {{ end }}>
+
+    email: <input type="email" name="email" 
+        {{ if .Values.email }} 
+        value="{{ .Values.email }}" 
+        {{ end }}>
+
+    {{ if .Errors.email }} 
+        <div style="color: red;">
+        {{ .Errors.email }}
+        </div>
+    {{ end }}
+
+    <button type="submit">Submit </button>
+</form>
+{{ end }}
+
+{{ block "display" . }}
+    <div id="contacts" style="display: flex; flex-direction: column;">
+        {{ range .Contacts }}
+            {{ template "contact" . }}
+        {{ end }}
+    </div>
+{{ end }}
+
+<!-- Lo que hacemos es creaar una plantilla para un contacto y se la pasaremos al dsiplay por cada ciclo que haga para q ue le pase el objeto del contacto y lo pueda renderizar-->
+{{ block "contact" . }}
+<div id="contact-{{ .Id }}" style="display: flex; margin-bottom: 10px;">
+    <div  hx-target="#contact-{{ .Id }}" hx-swap="outerHTML"  style="width: 1rem; cursor: pointer;" hx-delete="/contacts/{{ .Id }}">
+
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path fill="none" d="M0 0h24v24H0z"/>
+            <path d="M4 2h16a1 1 0 011 1v1a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1zM3 6h18v16a1 1 0 01-1 1H4a1 1 0 01-1-1V6zm3 3v9a1 1 0 002 0v-9a1 1 0 00-2 0zm5 0v9a1 1 0 002 0v-9a1 1 0 00-2 0zm5 0v9a1 1 0 002 0v-9a1 1 0 00-2 0z"/>
+        </svg>
+
+    </div>
+    name: <span>{{ .Name }}</span>
+    <span>:::</span>
+    email: <span>{{ .Email }}</span>
+</div>
+{{ end }}
+
+<!-- Aqui lo que estamos haciendo es crear una temlplate para nuestro contacto que lo que hara es irse añadiendo al final de la lista de nuestros contactos, asi que en vez de llamar a la plantilla display cada vez qeu agreguemos uno nuevo lo que haremos sera llamar a esta plantilla para hacer que se agregue al final de la lista de contactos que ya tenemos previamente-->
+{{ block "oob-contact" . }}
+<div hx-swap-oob="afterbegin" id="contacts">
+    {{ template "contact" . }}
+</div>
+{{ end }}
